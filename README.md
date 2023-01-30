@@ -2,7 +2,7 @@
 
 ### Purpose: A program that validates the ORC supervisor and team registration google form data, and generates appropriate data to satisfy the needs of the team
 
-Setup details: 
+#### Setup details: 
 
 1. Update pip if needed using the following command: "-m pip install --upgrade pip"
 

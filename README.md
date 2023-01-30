@@ -1,6 +1,6 @@
 # ottawa-robotics-competition
 
-### Purpose: A program that validates the ORC supervisor and team registration google form data, and generates appropriate data to satisfy the needs of the team
+### Purpose: A program that validates the ORC supervisor and team registration google form data, and generates appropriate data to satisfy the needs of the logistical team
 
 #### Setup details: 
 

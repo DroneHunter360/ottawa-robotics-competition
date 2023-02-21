@@ -1,16 +1,9 @@
 """
-# get the different column categories (i.e. name, email, address, etc.)
-columns = teacher_registration.columns;
-
-# the number of rows of the sheet (i.e. the number of individuals who submitted form data)
-numRows = len(teacher_registration)
-
-# pd.isna(thing) --> checks if a thing from a cell is NaN or not
-
-# list(team_registration.iloc[:, [8, 13, 18, 23, 28, 33, 38]]) --> locating column by its index, and converting to a list
+Author: Steven Hua (Event planning)
+Usage: Aggregate Excel file registration data for the ORC into meaningful data used for logistical planning purposes
+Last modified: February 21, 2023
 """
 
-# imports
 import pandas as pd
 import math
 
@@ -27,11 +20,12 @@ lunch_options = {
     "1 slice of vegetarian": {"vegetarian": 1}
 }
 
-# master list of all the pizza types and how many SLICES of each pizza are required
-lunch_master_list = {
-    "pepperoni": 0,
-    "cheese": 0,
-    "vegetarian": 0
+tshirt_options = {
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL"
 }
 
 ############################################################################
@@ -66,6 +60,10 @@ error_emails = []
 # outputs the resulting teacher_emails list
 print(teacher_emails)
 
+# create dictionary to store key-value pairs relating supervisors' email addresses to the school/community group
+# associated to it
+school_email_pairs = {}
+
 # iterate through the team registration form's emails and cross-reference them with the list of teacher emails
 for email in team_registration["Primary Supervisor Email Address | Adresse courriel du(de la) superviseur(e) primaire"]:
     if email not in teacher_emails:
@@ -73,60 +71,89 @@ for email in team_registration["Primary Supervisor Email Address | Adresse courr
 
 # outputs any error emails, if our list of error emails is non-empty
 if error_emails:
-    print("\nThe following emails from the Team Registration form did not have a matching teacher email from the Teacher Registration form:\n")
+    print("The following emails from the Team Registration form did not have a matching teacher email from the Teacher Registration form:\n")
     for error_email in error_emails:
         print(error_email)
     exit(1)  # stop execution of code
 else:
-    print("\nAll emails from the Team Registration form matched with at least one teacher email from the Teacher Registration form.\n")
+    print("All emails from the Team Registration form matched with at least one teacher email from the Teacher Registration form.\n")
 
 ############################################################################
 # END DATA VALIDATION
 ############################################################################
 
 ############################################################################
-# BEGIN PIZZA ORDERS PROCESSING
+# BEGIN DICTIONARY SETUP
 ############################################################################
 
+model = {}
+
+# list of the school/community groups
 groups = teacher_registration["School or Community Name | Nom de l'école ou du communauté"]
-teacher_lunch_choices = list(teacher_registration["Lunch Choice"])
-teacher_lunch_choices.extend(list(teacher_registration["Lunch Choice.1"]))
 
-# 8, 13, 18, 23, 28, 33, 38 representative of the index of the columns (0-based indexing) --> 1 column/participant
-team_lunch_choices = list(team_registration["Lunch Choice"])
+# iterate through each group
+for i in range(0, len(groups), 1):
+    # emails attribute contains a list of all teacher/supervisor emails for that group
+    # members attribute contains a separate object for each member of that group, with each object containing
+    # information about their lunch choice, t-shirt size, etc.
+    model[groups[i]] = {"emails": [], "members": {}}
 
-for i in range(1, 7, 1):
-    team_lunch_choices.extend(list(team_registration[f'Lunch Choice.{i}']))
+    # only add an email if it is a non-empty cell field
+    if not pd.isna(teacher_registration.iloc[i]["Email Address | Adresse courriel"]):
+        model[groups[i]]["emails"].append(teacher_registration.iloc[i]["Email Address | Adresse courriel"])
 
-# creating master list of pizza choices (by splices) for the entire competition
-for choice in teacher_lunch_choices:
-    if choice in lunch_options:
-        for pizza_choice in lunch_options[choice]:
-            lunch_master_list[pizza_choice] += lunch_options[choice][pizza_choice]
+    # only add an email if it is a non-empty cell field
+    if not pd.isna(teacher_registration.iloc[i]["Email of Supervisor #2 | Adresse courriel du superviseur #2"]):
+        model[groups[i]]["emails"].append(teacher_registration.iloc[i]["Email of Supervisor #2 | Adresse courriel du superviseur #2"])
 
-for choice in team_lunch_choices:
-    if choice in lunch_options:
-        for pizza_choice in lunch_options[choice]:
-            lunch_master_list[pizza_choice] += lunch_options[choice][pizza_choice]
+    # add TEACHERS' lunch choices and shirt sizes to their dictionary object
+    teacher_name = teacher_registration.iloc[i]["Full Name | Nom complet"]
+    model[groups[i]]["members"][teacher_name] = {"lunch_choice": '', "shirt_size": '', "isStudent": False}
+    # only add a lunch choice if it is a non-empty cell field
+    if not pd.isna(teacher_registration.iloc[i]["Lunch Choice"]):
+        model[groups[i]]["members"][teacher_name]["lunch_choice"] = teacher_registration.iloc[i]["Lunch Choice"]
+    if not pd.isna(teacher_registration.iloc[i]["Lunch Choice.1"]):
+        model[groups[i]]["members"][teacher_name]["lunch_choice"] = teacher_registration.iloc[i]["Lunch Choice.1"]
 
-# for pizza in lunch_master_list:
-#     lunch_master_list[pizza] = math.ceil(lunch_master_list[pizza] / 8)
+    teacher_name = teacher_registration.iloc[i]["Full Name of Supervisor #2 | Nom complet du superviseur #2"]
+    model[groups[i]]["members"][teacher_name] = {"lunch_choice": '', "shirt_size": '', "isStudent": False}
+    # only add a shirt size if it is a non-empty cell field
+    if not pd.isna(teacher_registration.iloc[i]["T-Shirt Size"]):
+        model[groups[i]]["members"][teacher_name]["shirt_size"] = teacher_registration.iloc[i]["T-Shirt Size"]
+    if not pd.isna(teacher_registration.iloc[i]["T-Shirt Size.1"]):
+        model[groups[i]]["members"][teacher_name]["shirt_size"] = teacher_registration.iloc[i]["T-Shirt Size.1"]
 
-print(lunch_master_list)
+# aggregate the information for each student of each group
+for row in range(0, len(team_registration), 1):
+    # determine which school/community grop this member is associated with
+    primary_email = team_registration.iloc[row]["Primary Supervisor Email Address | Adresse courriel du(de la) superviseur(e) primaire"]
+    group_school = ""
 
-# print(df["Full Name | Nom complet"][1])
+    for group in model:
+        if primary_email in model[group]["emails"]:
+            group_school = group
+            break
 
-#for column in columns:
-#    i = 0
-#    while i < numRows:
-#       print(df[column][i])
-#        i += 1
+    # add STUDENTS' lunch choices to their dictionary object
+    student_name = team_registration.iloc[row]['Full Name of Student #1 | Nom complet d\'élève #1']
+    model[group_school]["members"][student_name] = {"lunch_choice": '', "shirt_size": '', "team_name": '', "isStudent": True} # specify that each student is an object
+    model[group_school]["members"][student_name]["lunch_choice"] = team_registration.iloc[row]['Lunch Choice']
+    model[group_school]["members"][student_name]["shirt_size"] = team_registration.iloc[row]['T-Shirt Size']
+    model[group_school]["members"][student_name]["team_name"] = team_registration.iloc[row]['Team Name | Nom d\'équipe']
+    for j in range(1, 7, 1):
+        student_name = team_registration.iloc[row][f'Full Name of Student #{j+1} | Nom complet d\'élève #{j+1}']
+        model[group_school]["members"][student_name] = {"lunch_choice": '', "shirt_size": '', "team_name": '', "isStudent": True}  # specify that each student is an object
 
-string = "Lunch Choice"
+        if not pd.isna(team_registration.iloc[row][f'Lunch Choice.{j}']):
+            model[group_school]["members"][student_name]["lunch_choice"] = team_registration.iloc[row][f'Lunch Choice.{j}']
 
-#print(string in columns) # check if column category is in our array of categories
+        if not pd.isna(team_registration.iloc[row][f'T-Shirt Size.{j}']):
+            model[group_school]["members"][student_name]["shirt_size"] = team_registration.iloc[row][f'T-Shirt Size.{j}']
 
+        if not pd.isna(team_registration.iloc[row]['Team Name | Nom d\'équipe']):
+            model[group_school]["members"][student_name]["team_name"] = team_registration.iloc[row]['Team Name | Nom d\'équipe']
+
+print(model)
 ############################################################################
-# END PIZZA ORDERS PROCESSING
+# END DICTIONARY SETUP
 ############################################################################
-

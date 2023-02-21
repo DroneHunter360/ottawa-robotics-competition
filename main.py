@@ -112,14 +112,14 @@ for i in range(0, len(groups), 1):
     # only add a lunch choice if it is a non-empty cell field
     if not pd.isna(teacher_registration.iloc[i]["Lunch Choice"]):
         model[groups[i]]["members"][teacher_name]["lunch_choice"] = teacher_registration.iloc[i]["Lunch Choice"]
-    if not pd.isna(teacher_registration.iloc[i]["Lunch Choice.1"]):
-        model[groups[i]]["members"][teacher_name]["lunch_choice"] = teacher_registration.iloc[i]["Lunch Choice.1"]
+    if not pd.isna(teacher_registration.iloc[i]["T-Shirt Size"]):
+        model[groups[i]]["members"][teacher_name]["shirt_size"] = teacher_registration.iloc[i]["T-Shirt Size"]
 
     teacher_name = teacher_registration.iloc[i]["Full Name of Supervisor #2 | Nom complet du superviseur #2"]
     model[groups[i]]["members"][teacher_name] = {"lunch_choice": '', "shirt_size": '', "isStudent": False}
+    if not pd.isna(teacher_registration.iloc[i]["Lunch Choice.1"]):
+        model[groups[i]]["members"][teacher_name]["lunch_choice"] = teacher_registration.iloc[i]["Lunch Choice.1"]
     # only add a shirt size if it is a non-empty cell field
-    if not pd.isna(teacher_registration.iloc[i]["T-Shirt Size"]):
-        model[groups[i]]["members"][teacher_name]["shirt_size"] = teacher_registration.iloc[i]["T-Shirt Size"]
     if not pd.isna(teacher_registration.iloc[i]["T-Shirt Size.1"]):
         model[groups[i]]["members"][teacher_name]["shirt_size"] = teacher_registration.iloc[i]["T-Shirt Size.1"]
 
@@ -154,6 +154,47 @@ for row in range(0, len(team_registration), 1):
             model[group_school]["members"][student_name]["team_name"] = team_registration.iloc[row]['Team Name | Nom d\'équipe']
 
 print(model)
+print("\n")
 ############################################################################
 # END DICTIONARY SETUP
 ############################################################################
+
+############################################################################
+# FUNCTIONS FOR LIST CREATIONS
+############################################################################
+
+def create_general_pizza_list():
+    result = {
+        "pepperoni": 0,
+        "cheese": 0,
+        "vegetarian": 0,
+        "pepperoni_pizzas": 0,
+        "cheese_pizzas": 0,
+        "vegetarian_pizzas": 0
+    }
+
+    for g in model:
+        for member in model[g]["members"]:
+            lunch_choice = model[g]["members"][member]["lunch_choice"]
+            if lunch_choice in lunch_options:
+                for pizza_type in lunch_options[lunch_choice]:
+                    result[pizza_type] += lunch_options[lunch_choice][pizza_type]
+
+    result["pepperoni_pizzas"] = math.ceil(result["pepperoni"] / 8)
+    result["cheese_pizzas"] = math.ceil(result["cheese"] / 8)
+    result["vegetarian_pizzas"] = math.ceil(result["vegetarian"] / 8)
+    return result
+
+def create_pizza_list_by_school():
+    result = {}
+
+    for g in model:
+        result[g] = {"supervisors": {}, "students": {}}
+        for member in model[g]["members"]:
+            if (model[g]["members"][member]["isStudent"]):
+                result[g]["students"][member] = model[g]["members"][member]["lunch_choice"]
+            else:
+                result[g]["supervisors"][member] = model[g]["members"][member]["lunch_choice"]
+    return result
+
+print(create_pizza_list_by_school())

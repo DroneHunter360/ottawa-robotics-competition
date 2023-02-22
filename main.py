@@ -5,6 +5,7 @@ Last modified: February 21, 2023
 """
 
 import pandas as pd
+import csv
 import math
 
 # all the lunch options as displayed in the actual Google Form that participants fill out (modify the options as needed)
@@ -163,6 +164,7 @@ print("\n")
 # FUNCTIONS FOR LIST CREATIONS
 ############################################################################
 
+# total sum of slices by type of pizza, divided by 8, and rounded up by 1
 def create_general_pizza_list():
     result = {
         "pepperoni": 0,
@@ -185,16 +187,142 @@ def create_general_pizza_list():
     result["vegetarian_pizzas"] = math.ceil(result["vegetarian"] / 8)
     return result
 
-def create_pizza_list_by_school():
+# sum of slices by type of pizza, organized by school/community group
+def create_pizza_list_by_school1():
     result = {}
 
     for g in model:
-        result[g] = {"supervisors": {}, "students": {}}
+        result[g] = {
+            "pepperoni": 0,
+            "cheese": 0,
+            "vegetarian": 0
+        }
         for member in model[g]["members"]:
-            if (model[g]["members"][member]["isStudent"]):
-                result[g]["students"][member] = model[g]["members"][member]["lunch_choice"]
+            lunch_choice = model[g]["members"][member]["lunch_choice"]
+            if lunch_choice in lunch_options:
+                for pizza_type in lunch_options[lunch_choice]:
+                    result[g][pizza_type] += lunch_options[lunch_choice][pizza_type]
+
+    for g in result:
+        for pizza_type in result[g]:
+            if result[g][pizza_type] == 8:
+                str_result = '1 Pizza'
+            elif result[g][pizza_type] > 8:
+                str_result = '1 Pizza and ' + str(result[g][pizza_type] % 8) + ' slice(s)'
             else:
-                result[g]["supervisors"][member] = model[g]["members"][member]["lunch_choice"]
+                str_result = str(result[g][pizza_type]) + ' Slice(s)'
+
+            result[g][pizza_type] = str_result
     return result
 
-print(create_pizza_list_by_school())
+# student and supervisors' pizza orders, listed out separately and organized by school/community group
+def create_pizza_list_by_school2():
+    result = {}
+
+    for g in model:
+        result[g] = {}
+        for member in model[g]["members"]:
+            result[g][member] = model[g]["members"][member]["lunch_choice"]
+    return result
+
+# total number of t-shirts by size, keeping supervisor and student t-shirts SEPARATE
+def create_general_tshirt_list():
+    result = {
+        'students': {
+            'S': 0,
+            'M': 0,
+            'L': 0,
+            'XL': 0,
+            'XXL': 0
+        },
+        'supervisors': {
+            'S': 0,
+            'M': 0,
+            'L': 0,
+            'XL': 0,
+            'XXL': 0
+        }
+    }
+
+    for g in model:
+        for member in model[g]["members"]:
+            shirt_size = model[g]["members"][member]['shirt_size']
+            if not shirt_size == '':
+                if model[g]["members"][member]['isStudent']:
+                    result['students'][shirt_size] += 1
+                else:
+                    result['supervisors'][shirt_size] += 1
+    return result
+
+# listing of each student's t-shirt size, by TEAM (FORMATTED FOR EASY CONVERSION TO CSV)
+def create_tshirt_list_by_team1():
+    result = [['Team', 'Student', 'Size']]
+
+    for g in model:
+        for member in model[g]["members"]:
+            if model[g]["members"][member]['isStudent']:
+                team = model[g]["members"][member]['team_name']
+                shirt_size = model[g]["members"][member]['shirt_size']
+                result.append([team, member, shirt_size])
+    return result
+
+# total number of t-shirts by size for each team
+def create_tshirt_list_by_team2():
+    teams = team_registration["Team Name | Nom d'équipe"]
+    result = {}
+    for team in teams:
+        result[team] = {
+            'S': 0,
+            'M': 0,
+            'L': 0,
+            'XL': 0,
+            'XXL': 0
+        }
+
+    for g in model:
+        for member in model[g]["members"]:
+            if model[g]["members"][member]['isStudent']:
+                shirt_size = model[g]["members"][member]['shirt_size']
+                if not shirt_size == '':
+                    team = model[g]["members"][member]['team_name']
+                    result[team][shirt_size] += 1
+    return result
+
+# team supervisors, with their name and school/community group
+def create_supervisor_certificates_list():
+    result = []
+
+    for g in model:
+        for member in model[g]["members"]:
+            if not model[g]["members"][member]['isStudent']:
+                result.append([member, g])
+    return result
+
+# students, with their name, school/community group, and team name
+def create_student_certificates_list():
+    result = []
+
+    for g in model:
+        for member in model[g]["members"]:
+            if model[g]["members"][member]['isStudent']:
+                team = model[g]["members"][member]["team_name"]
+                result.append([member, g, team])
+    return result
+
+############################################################################
+# END FUNCTIONS FOR LIST CREATIONS
+############################################################################
+
+print(create_general_pizza_list())
+print(create_pizza_list_by_school1())
+print(create_pizza_list_by_school2())
+print(create_general_tshirt_list())
+print(create_tshirt_list_by_team1())
+print(create_tshirt_list_by_team2())
+print(create_supervisor_certificates_list())
+print(create_student_certificates_list())
+
+with open('shirt_output1.csv', 'w', encoding='UTF8', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(create_tshirt_list_by_team1())
+    file.close()

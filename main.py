@@ -7,6 +7,7 @@ Last modified: February 21, 2023
 import pandas as pd
 import csv
 import math
+import os
 
 # all the lunch options as displayed in the actual Google Form that participants fill out (modify the options as needed)
 lunch_options = {
@@ -154,8 +155,6 @@ for row in range(0, len(team_registration), 1):
         if not pd.isna(team_registration.iloc[row]['Team Name | Nom d\'équipe']):
             model[group_school]["members"][student_name]["team_name"] = team_registration.iloc[row]['Team Name | Nom d\'équipe']
 
-print(model)
-print("\n")
 ############################################################################
 # END DICTIONARY SETUP
 ############################################################################
@@ -164,94 +163,84 @@ print("\n")
 # FUNCTIONS FOR LIST CREATIONS
 ############################################################################
 
-# total sum of slices by type of pizza, divided by 8, and rounded up by 1
+# total sum of slices by type of pizza, divided by 8, and rounded up by 1 (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_general_pizza_list():
-    result = {
-        "pepperoni": 0,
-        "cheese": 0,
-        "vegetarian": 0,
-        "pepperoni_pizzas": 0,
-        "cheese_pizzas": 0,
-        "vegetarian_pizzas": 0
-    }
+    result = [
+        ['pepperoni', 'cheese', 'vegetarian', 'pepperoni_pizzas', 'cheese_pizzas', 'vegetarian_pizzas'],
+        [0, 0, 0, 0, 0, 0]
+    ]
 
     for g in model:
         for member in model[g]["members"]:
             lunch_choice = model[g]["members"][member]["lunch_choice"]
             if lunch_choice in lunch_options:
                 for pizza_type in lunch_options[lunch_choice]:
-                    result[pizza_type] += lunch_options[lunch_choice][pizza_type]
+                    index = result[0].index(pizza_type)
+                    result[1][index] += lunch_options[lunch_choice][pizza_type]
 
-    result["pepperoni_pizzas"] = math.ceil(result["pepperoni"] / 8)
-    result["cheese_pizzas"] = math.ceil(result["cheese"] / 8)
-    result["vegetarian_pizzas"] = math.ceil(result["vegetarian"] / 8)
+    for i in range(3, 6, 1):
+        result[1][i] = math.ceil(result[1][i-3] / 8)
+
     return result
 
-# sum of slices by type of pizza, organized by school/community group
+# sum of slices by type of pizza, organized by school/community group (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_pizza_list_by_school1():
-    result = {}
+    result = [['school', 'pepperoni', 'cheese', 'vegetarian']]
 
     for g in model:
-        result[g] = {
-            "pepperoni": 0,
-            "cheese": 0,
-            "vegetarian": 0
-        }
+        tempArr = [g, 0, 0, 0]
+
         for member in model[g]["members"]:
             lunch_choice = model[g]["members"][member]["lunch_choice"]
             if lunch_choice in lunch_options:
                 for pizza_type in lunch_options[lunch_choice]:
-                    result[g][pizza_type] += lunch_options[lunch_choice][pizza_type]
+                    index = result[0].index(pizza_type)
+                    tempArr[index] += lunch_options[lunch_choice][pizza_type]
 
-    for g in result:
-        for pizza_type in result[g]:
-            if result[g][pizza_type] == 8:
+        result.append(tempArr)
+
+    for i in range(1, len(result), 1):
+        for j in range(1, len(result[i]), 1):
+            if result[i][j] == 8:
                 str_result = '1 Pizza'
-            elif result[g][pizza_type] > 8:
-                str_result = '1 Pizza and ' + str(result[g][pizza_type] % 8) + ' slice(s)'
+            elif result[i][j] > 8:
+                str_result = '1 Pizza and ' + str(result[i][j] % 8) + ' slice(s)'
             else:
-                str_result = str(result[g][pizza_type]) + ' Slice(s)'
+                str_result = str(result[i][j]) + ' Slice(s)'
 
-            result[g][pizza_type] = str_result
+            result[i][j] = str_result
     return result
 
-# student and supervisors' pizza orders, listed out separately and organized by school/community group
+# student and supervisors' pizza orders, listed out separately and organized by school/community group (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_pizza_list_by_school2():
-    result = {}
+    result = [['School', 'Person', 'Order']]
 
     for g in model:
-        result[g] = {}
         for member in model[g]["members"]:
-            result[g][member] = model[g]["members"][member]["lunch_choice"]
+            lunch_order = model[g]["members"][member]["lunch_choice"]
+            result.append([g, member, lunch_order])
+
     return result
 
-# total number of t-shirts by size, keeping supervisor and student t-shirts SEPARATE
+# total number of t-shirts by size, keeping supervisor and student t-shirts SEPARATE (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_general_tshirt_list():
-    result = {
-        'students': {
-            'S': 0,
-            'M': 0,
-            'L': 0,
-            'XL': 0,
-            'XXL': 0
-        },
-        'supervisors': {
-            'S': 0,
-            'M': 0,
-            'L': 0,
-            'XL': 0,
-            'XXL': 0
-        }
-    }
+    # FIRST sub-list within result => STUDENTS
+    # SECOND sub-list within result => SUPERVISORS
+    result = [[['S', 'M', 'L', 'XL', 'XXL'], [0, 0, 0, 0, 0]], [['S', 'M', 'L', 'XL', 'XXL'], [0, 0, 0, 0, 0]]]
 
     for g in model:
         for member in model[g]["members"]:
             shirt_size = model[g]["members"][member]['shirt_size']
             if not shirt_size == '':
+                index = result[0][0].index(shirt_size)
                 if model[g]["members"][member]['isStudent']:
-                    result['students'][shirt_size] += 1
+                    #result['students'][shirt_size] += 1
+
+                    result[0][1][index] += 1
                 else:
-                    result['supervisors'][shirt_size] += 1
+                    #result['supervisors'][shirt_size] += 1
+                    result[1][1][index] += 1
+
     return result
 
 # listing of each student's t-shirt size, by TEAM (FORMATTED FOR EASY CONVERSION TO CSV)
@@ -266,18 +255,12 @@ def create_tshirt_list_by_team1():
                 result.append([team, member, shirt_size])
     return result
 
-# total number of t-shirts by size for each team
+# total number of t-shirts by size for each team (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_tshirt_list_by_team2():
     teams = team_registration["Team Name | Nom d'équipe"]
-    result = {}
+    result = [['Team', 'S', 'M', 'L', 'XL', 'XXL']]
     for team in teams:
-        result[team] = {
-            'S': 0,
-            'M': 0,
-            'L': 0,
-            'XL': 0,
-            'XXL': 0
-        }
+        result.append([team, 0, 0, 0, 0, 0])
 
     for g in model:
         for member in model[g]["members"]:
@@ -285,12 +268,23 @@ def create_tshirt_list_by_team2():
                 shirt_size = model[g]["members"][member]['shirt_size']
                 if not shirt_size == '':
                     team = model[g]["members"][member]['team_name']
-                    result[team][shirt_size] += 1
+                    shirt_index = result[0].index(shirt_size)
+                    team_index = find_team_index(team, result)
+                    if not team_index == -1:
+                        result[team_index][shirt_index] += 1
+
     return result
 
-# team supervisors, with their name and school/community group
+# helper function for create_tshirt_list_by_team2()
+def find_team_index(team, list):
+    for i in range(1, len(list), 1):
+        if list[i][0] == team:
+            return i
+    return -1
+
+# team supervisors, with their name and school/community group (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_supervisor_certificates_list():
-    result = []
+    result = [['Name', 'School Name']]
 
     for g in model:
         for member in model[g]["members"]:
@@ -298,9 +292,9 @@ def create_supervisor_certificates_list():
                 result.append([member, g])
     return result
 
-# students, with their name, school/community group, and team name
+# students, with their name, school/community group, and team name (FORMATTED FOR EASY CONVERSION TO CSV)
 def create_student_certificates_list():
-    result = []
+    result = [['Name', 'School Name', 'Team Name']]
 
     for g in model:
         for member in model[g]["members"]:
@@ -309,20 +303,41 @@ def create_student_certificates_list():
                 result.append([member, g, team])
     return result
 
+# helper function that will create a .csv file with the provided data
+def create_csv(filename, arg):
+    with open(filename, 'w', encoding='UTF8', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(arg)
+        file.close()
+
 ############################################################################
 # END FUNCTIONS FOR LIST CREATIONS
 ############################################################################
 
-print(create_general_pizza_list())
-print(create_pizza_list_by_school1())
-print(create_pizza_list_by_school2())
-print(create_general_tshirt_list())
-print(create_tshirt_list_by_team1())
-print(create_tshirt_list_by_team2())
-print(create_supervisor_certificates_list())
-print(create_student_certificates_list())
+############################################################################
+# BEGIN EXCEL FILES GENERATION
+############################################################################
 
-with open('shirt_output1.csv', 'w', encoding='UTF8', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(create_tshirt_list_by_team1())
-    file.close()
+# path to the directory that will store all the generated lists
+path = './generated_lists/'
+
+# create the above directory if it does not already exist
+if not os.path.exists(path):
+    os.mkdir(path)
+
+file_names = ['./generated_lists/pizza_orders_general.csv', './generated_lists/pizza_orders_by_school.csv',
+              './generated_lists/pizza_orders_by_individual.csv', './generated_lists/shirt_orders_general.csv',
+              './generated_lists/shirt_orders_by_student.csv', './generated_lists/shirt_orders_by_supervisor.csv',
+              './generated_lists/shirt_orders_by_team.csv', './generated_lists/certificates_list_supervisors.csv',
+              './generated_lists/certificates_list_students.csv']
+
+lists = [create_general_pizza_list(), create_pizza_list_by_school1(), create_pizza_list_by_school2(),
+         create_general_tshirt_list()[0], create_general_tshirt_list()[1], create_tshirt_list_by_team1(),
+         create_tshirt_list_by_team2(), create_supervisor_certificates_list(), create_student_certificates_list()]
+
+for i in range(0, len(file_names), 1):
+    create_csv(file_names[i], lists[i])
+
+############################################################################
+# END EXCEL FILES GENERATION
+############################################################################

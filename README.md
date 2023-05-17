@@ -1,6 +1,6 @@
 # ottawa-robotics-competition
 
-### Purpose: 
+## Purpose: 
 ### A script that automates the Ottawa Robotics Competition registration data processing. Aggregates participant data and generates billing invoices, tracks attendee lunch orders, shirt size, and more.
 
 #### Setup details: 

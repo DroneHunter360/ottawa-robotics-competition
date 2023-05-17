@@ -1,6 +1,6 @@
 # ottawa-robotics-competition
 
-### Purpose: A script that validates the ORC supervisor and team registration google form data, and generates appropriate data to satisfy the needs of the logistical team
+### Purpose: A script that automates the Ottawa Robotics Competition registration data processing. Aggregates participant data and generates billing invoices, tracks attendee lunch orders, shirt size, and more.
 
 #### Setup details: 
 
